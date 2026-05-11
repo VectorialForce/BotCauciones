@@ -12,7 +12,7 @@ from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQuer
 from typing import Dict
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from twitter_bot import TwitterBot
+from deprecado.twitter_bot import TwitterBot
 
 load_dotenv()
 

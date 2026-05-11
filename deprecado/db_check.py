@@ -11,7 +11,7 @@ import sys
 load_dotenv()
 
 # Importar después de cargar .env
-from main import DatabaseHelper
+from deprecado.main import DatabaseHelper
 
 
 def main():
