@@ -287,6 +287,7 @@ class PostgreSQLPersistence:
                         rate_3d REAL NOT NULL,
                         rate_7d REAL NOT NULL,
                         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                        volumen_cauciones REAL NOT NULL
                     )
                 """)
 

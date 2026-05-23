@@ -1,3 +1,4 @@
+from zoneinfo import ZoneInfo
 
 # Huso horario de Argentina
 ARGENTINA_TZ = ZoneInfo("America/Buenos_Aires")
