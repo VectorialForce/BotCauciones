@@ -108,6 +108,7 @@ class DatabaseHelper:
     def __init__(self, db_config: dict):
         self.db_config = db_config
 
+    # DEPRECADO
     def check_connection(self) -> tuple[bool, str]:
         """
         Verificar si la conexión a la base de datos es válida.
@@ -122,6 +123,7 @@ class DatabaseHelper:
         except Exception as e:
             return False, f"Error inesperado: {e}"
 
+    # DEPRECADO
     def check_tables_exist(self) -> tuple[bool, list[str]]:
         """
         Verificar que las tablas requeridas existen.
@@ -149,6 +151,7 @@ class DatabaseHelper:
             logger.error(f"Error verificando tablas: {e}")
             return False, required_tables
 
+    # DEPRECADO
     def health_check(self) -> dict:
         """
         Realizar un health check completo de la base de datos.
@@ -179,6 +182,7 @@ class DatabaseHelper:
 
         return result
 
+    # REFACTORIZADO
     def get_db_stats(self) -> dict:
         """Obtener estadísticas de la base de datos"""
         try:
@@ -237,6 +241,7 @@ class PostgreSQLPersistence:
         # Inicializar base de datos
         self.init_db()
 
+    # REFACTORIZADO
     def _verify_connection(self):
         """Verificar que la conexión es válida antes de continuar"""
         ok, msg = self.helper.check_connection()
@@ -245,6 +250,7 @@ class PostgreSQLPersistence:
             raise ConnectionError(f"No se pudo conectar a la base de datos: {msg}")
         logger.info(f"✅ Conexión a PostgreSQL verificada: {self.db_config['host']}")
 
+    # REFACTORIZADO
     def _get_connection(self):
         """Obtener una conexión a la base de datos"""
         try:
@@ -252,7 +258,8 @@ class PostgreSQLPersistence:
         except psycopg2.OperationalError as e:
             logger.error(f"Error obteniendo conexión: {e}")
             raise
-
+    
+    # REFACTORIZADO
     def close(self):
         """Cerrar conexiones abiertas"""
         if self._conn is not None:
@@ -263,6 +270,8 @@ class PostgreSQLPersistence:
             except Exception as e:
                 logger.error(f"Error cerrando conexión: {e}")
 
+    # MODIFICAR TABLAS PARA INCLUIR CANTIDAD OPERADA
+    # DEPRECADO. NO ES NECESARIO
     def init_db(self):
         """Crear tablas si no existen"""
         with self._get_connection() as conn:

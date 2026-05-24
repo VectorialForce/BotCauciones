@@ -32,6 +32,13 @@ db_config_test = {
 
 db_env = db_config_test if test else db_config
 
+# Esto esta de modo temporal, es una responsabilidad del orquestador NO del modulo
+required_vars = ['DB_HOST', 'DB_USER', 'DB_PASS', 'DB_NAME']
+missing = [var for var in required_vars if not getenv(var)]
+if missing:
+    raise EnvironmentError(f"Variables de entorno faltantes: {', '.join(missing)}")
+
+
 @contextmanager
 def conectar_db():
     conn = psycopg2.connect(**db_env)
@@ -54,7 +61,11 @@ def _verificar_conexion():
     except Exception as e:
         logger.error(f"No se pudo conectar a PostgreSQL: {e}")
 
-def _obtener_estadisticas() -> dict:
+#----------------------------------------
+# GETTERS y SETTERS
+#----------------------------------------
+
+def get_estadisticas() -> dict:
     """Obtener estadísticas de la base de datos"""
 
     tablas = ['subscriptions', 'rate_history', 'suggestions']
@@ -74,10 +85,31 @@ def _obtener_estadisticas() -> dict:
         return {}
 
     return stats
-
             
+def get_suscripciones() -> dict | None:
+    """Obtener todas las suscripciones"""
+    with conectar_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT *
+                FROM subscriptions
+                ORDER BY created_at DESC
+                """)
+            
+            suscripciones = {}
 
-def get_ultima_tasa() -> dict | None:
+            for fila in cur.fetchall():
+                suscripciones[fila['chat_id']] = {
+                    'chat_id': fila['chat_id'],
+                    'subscription_type':fila['subscription_type'],
+                    'threshold_percentage' :fila['threshold_percentage']
+                }
+
+            logger.info(f"✅ Cargadas {len(suscripciones)} suscripciones desde PostgreSQL")
+            return suscripciones
+
+def get_ultimas_tasas() -> dict | None:
+    """Obtener las últimas tasas registradas"""
     with conectar_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -86,18 +118,15 @@ def get_ultima_tasa() -> dict | None:
                 ORDER BY id DESC
                 LIMIT 1
             """)
-            row = cur.fetchone()
+            fila = cur.fetchone()
 
-    if row is None:
+    if fila is None:
         return None
 
     return {
-        '1d': row[0],
-        '2d': row[1],
-        '3d': row[2],
-        '7d': row[3],
-        'timestamp': row[4],
+        '1d': fila[0],
+        '2d': fila[1],
+        '3d': fila[2],
+        '7d': fila[3],
+        'timestamp': fila[4],
     }
-
-tasa = get_ultima_tasa()
-print(tasa)
