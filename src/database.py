@@ -1,7 +1,9 @@
+import asyncio
 from contextlib import contextmanager
 from dotenv import load_dotenv
 from os import getenv
 import psycopg2
+from psycopg2.extras import RealDictCursor
 from config import configurar_logging
 
 #----------------------------------------
@@ -9,7 +11,7 @@ from config import configurar_logging
 #----------------------------------------
 
 # IMPORTANTE - Bandera para apuntar a test o prod
-test = True
+test = False
 
 logger = configurar_logging()
 load_dotenv()
@@ -38,9 +40,11 @@ missing = [var for var in required_vars if not getenv(var)]
 if missing:
     raise EnvironmentError(f"Variables de entorno faltantes: {', '.join(missing)}")
 
+write_lock = asyncio.Lock()
 
 @contextmanager
 def conectar_db():
+    """Conectar a la base de datos"""
     conn = psycopg2.connect(**db_env)
     try:
         yield conn
@@ -66,9 +70,9 @@ def _verificar_conexion():
 #----------------------------------------
 
 def get_estadisticas() -> dict:
-    """Obtener estadísticas de la base de datos"""
+    """Obtener cantidad de suscripciones, cantidad de sugerencias y tamaño de la base de datos"""
 
-    tablas = ['subscriptions', 'rate_history', 'suggestions']
+    tablas = ['subscriptions', 'suggestions']
     stats = {}
 
     try:
@@ -89,7 +93,7 @@ def get_estadisticas() -> dict:
 def get_suscripciones() -> dict | None:
     """Obtener todas las suscripciones"""
     with conectar_db() as conn:
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
                 SELECT *
                 FROM subscriptions
@@ -109,7 +113,7 @@ def get_suscripciones() -> dict | None:
             return suscripciones
 
 def get_ultimas_tasas() -> dict | None:
-    """Obtener las últimas tasas registradas"""
+    """Obtener últimas tasas registradas"""
     with conectar_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -130,3 +134,39 @@ def get_ultimas_tasas() -> dict | None:
         '7d': fila[3],
         'timestamp': fila[4],
     }
+
+#----------------------------------------
+# Métodos PUBLICOS
+#----------------------------------------
+
+async def guardar_suscripcion(suscripcion):
+    """Guardar o actualizar una suscripción (async)"""
+    async with write_lock:
+        with conectar_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                INSERT INTO subscriptions
+                (chat_id, subscription_type, threshold_percentage, updated_at)
+                VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+                ON CONFLICT (chat_id) DO UPDATE SET
+                subscription_type = EXCLUDED.subscription_type,
+                threshold_percentage = EXCLUDED.threshold_percentage,
+                updated_at = CURRENT_TIMESTAMP
+                """, (
+                suscripcion.chat_id,
+                suscripcion.subscription_type.value,
+                suscripcion.threshold_percentage
+                ))
+                conn.commit()
+
+        logger.debug(f"💾 Suscripción guardada: chat_id={suscripcion.chat_id}")
+
+async def borrar_suscripcion(chat_id: int):
+    """Eliminar una suscripción"""
+    async with write_lock:
+        with conectar_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM subscriptions WHERE chat_id = %s", (chat_id,))
+                conn.commit()
+
+        logger.info(f"🗑️ Suscripción eliminada: chat_id={chat_id}")
