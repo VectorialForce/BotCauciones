@@ -62,8 +62,10 @@ def _verificar_conexion():
             logger.info(f"Conexión a PostgreSQL verificada: {db_env['dbname']}")
     except psycopg2.OperationalError as e:
         logger.error(f"No se pudo conectar a PostgreSQL: {e}")
+        raise ConnectionError(f"No se pudo conectar a la base de datos: {e}")
     except Exception as e:
         logger.error(f"No se pudo conectar a PostgreSQL: {e}")
+        raise
 
 #----------------------------------------
 # GETTERS y SETTERS
@@ -92,25 +94,29 @@ def get_estadisticas() -> dict:
             
 def get_suscripciones() -> dict | None:
     """Obtener todas las suscripciones"""
-    with conectar_db() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("""
-                SELECT *
-                FROM subscriptions
-                ORDER BY created_at DESC
-                """)
-            
-            suscripciones = {}
+    try:
+        with conectar_db() as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT *
+                    FROM subscriptions
+                    ORDER BY created_at DESC
+                    """)
 
-            for fila in cur.fetchall():
-                suscripciones[fila['chat_id']] = {
-                    'chat_id': fila['chat_id'],
-                    'subscription_type':fila['subscription_type'],
-                    'threshold_percentage' :fila['threshold_percentage']
-                }
+                suscripciones = {}
 
-            logger.info(f"✅ Cargadas {len(suscripciones)} suscripciones desde PostgreSQL")
-            return suscripciones
+                for fila in cur.fetchall():
+                    suscripciones[fila['chat_id']] = {
+                        'chat_id': fila['chat_id'],
+                        'subscription_type':fila['subscription_type'],
+                        'threshold_percentage' :fila['threshold_percentage']
+                    }
+
+                logger.info(f"✅ Cargadas {len(suscripciones)} suscripciones desde PostgreSQL")
+                return suscripciones
+    except Exception as e:
+        logger.error(f"Error cargando suscripciones: {e}")
+        return None
 
 def get_ultimas_tasas() -> dict | None:
     """Obtener últimas tasas registradas"""
@@ -135,6 +141,19 @@ def get_ultimas_tasas() -> dict | None:
         'timestamp': fila[4],
     }
 
+def get_sugerencias(no_leido: bool = False) -> list:
+    """Obtener sugerencias de la base de datos"""
+    with conectar_db() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            query = "SELECT * FROM suggestions"
+            if no_leido:
+                query += " WHERE read = FALSE"
+            query += " ORDER BY created_at DESC LIMIT 20"
+            cur.execute(query)
+            
+            return [dict(row) for row in cur.fetchall()]
+
+
 #----------------------------------------
 # Métodos PUBLICOS
 #----------------------------------------
@@ -145,13 +164,13 @@ async def guardar_suscripcion(suscripcion):
         with conectar_db() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                INSERT INTO subscriptions
-                (chat_id, subscription_type, threshold_percentage, updated_at)
-                VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
-                ON CONFLICT (chat_id) DO UPDATE SET
-                subscription_type = EXCLUDED.subscription_type,
-                threshold_percentage = EXCLUDED.threshold_percentage,
-                updated_at = CURRENT_TIMESTAMP
+                    INSERT INTO subscriptions
+                    (chat_id, subscription_type, threshold_percentage, updated_at)
+                    VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
+                    ON CONFLICT (chat_id) DO UPDATE SET
+                    subscription_type = EXCLUDED.subscription_type,
+                    threshold_percentage = EXCLUDED.threshold_percentage,
+                    updated_at = CURRENT_TIMESTAMP
                 """, (
                 suscripcion.chat_id,
                 suscripcion.subscription_type.value,
@@ -170,3 +189,35 @@ async def borrar_suscripcion(chat_id: int):
                 conn.commit()
 
         logger.info(f"🗑️ Suscripción eliminada: chat_id={chat_id}")
+
+def guardar_tasas(tasas: dict):
+    """Guardar tasas en la base de datos"""
+    with conectar_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO rate_history (rate_1d, rate_2d, rate_3d, rate_7d, timestamp)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (tasas['1d'], tasas['2d'], tasas['3d'], tasas['7d'], tasas['timestamp']))
+            conn.commit()
+        
+        logger.debug(f"💾 Tasas guardadas en DB: {tasas}")
+
+async def guardar_sugerencia(chat_id:int, username: str, mensaje: str):
+    """Guardar una sugerencia en la base de datos"""
+    async with write_lock:
+        with conectar_db() as conn:
+            with conn.cursor() as cur:
+               cur.execute("""
+                    INSERT INTO suggestions (chat_id, username, message)
+                    VALUES (%s, %s, %s)
+                    """, (chat_id, username, mensaje))
+            conn.commit()
+        
+        logger.info(f"💬 Sugerencia guardada de chat_id={chat_id}")
+
+def marcar_sugerencia_como_leida(sugerencia_id: int):
+    """Marcar una sugerencia como leída"""
+    with conectar_db() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE suggestions SET read = TRUE WHERE id = %s", (sugerencia_id,))
+            conn.commit()

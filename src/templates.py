@@ -14,7 +14,7 @@ def bienvenida() -> str:
     )
 
 # Nombre temporal, no se me ocurre otra cosa
-def welcome_back(config_info) -> str:
+def welcome_back(config_info: str) -> str:
     return (
         "👋 *¡Hola!*\n\n"
         f"{config_info}\n\n"
@@ -24,4 +24,11 @@ def welcome_back(config_info) -> str:
         "• /estado - Ver tu configuración\n"
         "• /pausar - Pausar notificaciones\n"
         "• /sugerencia - Enviar comentario\n"
+    )
+
+def agradecimiento_sugerencia() -> str:
+    return (
+        "✅ *¡Gracias por tu sugerencia!*\n\n"
+        "Tu mensaje fue registrado correctamente.\n\n"
+        "Aprecio tu feedback para mejorar el bot."
     )
