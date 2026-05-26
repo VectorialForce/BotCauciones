@@ -4,7 +4,11 @@ from dotenv import load_dotenv
 from os import getenv
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from config import configurar_logging
+
+try:
+    from .config import configurar_logging
+except ImportError:
+    from config import configurar_logging
 
 #----------------------------------------
 # Config basica
@@ -178,7 +182,7 @@ async def guardar_suscripcion(suscripcion):
                 ))
                 conn.commit()
 
-        logger.debug(f"💾 Suscripción guardada: chat_id={suscripcion.chat_id}")
+        logger.info(f"💾 Suscripción guardada: chat_id={suscripcion.chat_id}")
 
 async def borrar_suscripcion(chat_id: int):
     """Eliminar una suscripción"""
