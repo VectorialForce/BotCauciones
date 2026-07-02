@@ -45,7 +45,7 @@ def conectar_db():
 def get_estadisticas() -> dict:
     """Obtener cantidad de suscripciones, cantidad de sugerencias y tamaño de la base de datos"""
 
-    tablas = ['subscriptions', 'suggestions']
+    tablas = ['subscriptions', 'rate_history', 'suggestions']
     stats = {}
 
     try:
@@ -62,7 +62,33 @@ def get_estadisticas() -> dict:
         return {}
 
     return stats
-            
+
+def get_estadisticas_suscripciones() -> dict:
+    """Obtener desglose de suscripciones por tipo"""
+    try:
+        with conectar_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT COUNT(*) as total,
+                           SUM(CASE WHEN subscription_type = 'any_change' THEN 1 ELSE 0 END) as cualquier_cambio,
+                           SUM(CASE WHEN subscription_type = 'percentage' THEN 1 ELSE 0 END) as porcentaje,
+                           SUM(CASE WHEN subscription_type = 'target' THEN 1 ELSE 0 END) as objetivo,
+                           AVG(CASE WHEN subscription_type = 'percentage' THEN threshold_percentage END) as umbral_promedio
+                    FROM subscriptions
+                """)
+                fila = cur.fetchone()
+    except Exception as e:
+        logger.error(f"Error obteniendo estadísticas de suscripciones: {e}")
+        return {}
+
+    return {
+        'total_usuarios': fila[0] or 0,
+        'usuarios_cualquier_cambio': fila[1] or 0,
+        'usuarios_porcentaje': fila[2] or 0,
+        'usuarios_objetivo': fila[3] or 0,
+        'umbral_promedio': round(fila[4] or 0, 2) if fila[4] else 0,
+    }
+
 def get_suscripciones() -> dict | None:
     """Obtener todas las suscripciones"""
     try:
@@ -94,7 +120,11 @@ def get_ultimas_tasas() -> dict | None:
     with conectar_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT rate_1d, rate_2d, rate_3d, rate_7d, timestamp
+                SELECT rate_1d, volumen_1d,
+                       rate_2d, volumen_2d,
+                       rate_3d, volumen_3d,
+                       rate_7d, volumen_7d,
+                       timestamp
                 FROM rate_history
                 ORDER BY id DESC
                 LIMIT 1
@@ -105,11 +135,11 @@ def get_ultimas_tasas() -> dict | None:
         return None
 
     return {
-        '1d': fila[0],
-        '2d': fila[1],
-        '3d': fila[2],
-        '7d': fila[3],
-        'timestamp': fila[4],
+        '1d': fila[0], 'volumen_1d': fila[1],
+        '2d': fila[2], 'volumen_2d': fila[3],
+        '3d': fila[4], 'volumen_3d': fila[5],
+        '7d': fila[6], 'volumen_7d': fila[7],
+        'timestamp': fila[8],
     }
 
 def get_sugerencias(no_leido: bool = False) -> list:
