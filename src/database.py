@@ -1,44 +1,27 @@
 import asyncio
 from contextlib import contextmanager
-from dotenv import load_dotenv
 from os import getenv
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
 try:
     from .config import configurar_logging
+    from .config import server_config
 except ImportError:
     from config import configurar_logging
+    from config import server_config
 
 #----------------------------------------
 # Config basica
 #----------------------------------------
 
 # IMPORTANTE - Bandera para apuntar a test o prod
-test = False
+test = True
 
 logger = configurar_logging()
-load_dotenv()
+db_env = server_config(test)
 
-db_config = {
-    'host': getenv('DB_HOST'),
-    'port': int(getenv('DB_PORT', '5432')),
-    'user': getenv('DB_USER'),
-    'password': getenv('DB_PASS'),
-    'dbname': getenv('DB_NAME')
-}
-
-db_config_test = {
-    'host': getenv('DB_HOST'),
-    'port': int(getenv('DB_PORT', '5432')),
-    'user': getenv('DB_USER'),
-    'password': getenv('DB_PASS'),
-    'dbname': getenv('DB_NAME_TEST')
-}
-
-db_env = db_config_test if test else db_config
-
-# Esto esta de modo temporal, es una responsabilidad del orquestador NO del modulo
+# Esto esta de modo temporal, es una RESPONSABILIDAD del ORQUESTADOR NO del MODULO
 required_vars = ['DB_HOST', 'DB_USER', 'DB_PASS', 'DB_NAME']
 missing = [var for var in required_vars if not getenv(var)]
 if missing:
@@ -54,22 +37,6 @@ def conectar_db():
         yield conn
     finally:
         conn.close()
-
-#----------------------------------------
-# Métodos PRIVADOS
-#----------------------------------------
-
-def _verificar_conexion():
-    """Verificar que la conexión es válida antes de continuar"""
-    try:
-        with conectar_db():
-            logger.info(f"Conexión a PostgreSQL verificada: {db_env['dbname']}")
-    except psycopg2.OperationalError as e:
-        logger.error(f"No se pudo conectar a PostgreSQL: {e}")
-        raise ConnectionError(f"No se pudo conectar a la base de datos: {e}")
-    except Exception as e:
-        logger.error(f"No se pudo conectar a PostgreSQL: {e}")
-        raise
 
 #----------------------------------------
 # GETTERS y SETTERS
@@ -123,7 +90,7 @@ def get_suscripciones() -> dict | None:
         return None
 
 def get_ultimas_tasas() -> dict | None:
-    """Obtener últimas tasas registradas"""
+    """Obtener últimas tasas registradas en la base de datos"""
     with conectar_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
@@ -156,13 +123,8 @@ def get_sugerencias(no_leido: bool = False) -> list:
             cur.execute(query)
             
             return [dict(row) for row in cur.fetchall()]
-
-
-#----------------------------------------
-# Métodos PUBLICOS
-#----------------------------------------
-
-async def guardar_suscripcion(suscripcion):
+        
+async def set_suscripcion(suscripcion):
     """Guardar o actualizar una suscripción (async)"""
     async with write_lock:
         with conectar_db() as conn:
@@ -184,29 +146,31 @@ async def guardar_suscripcion(suscripcion):
 
         logger.info(f"💾 Suscripción guardada: chat_id={suscripcion.chat_id}")
 
-async def borrar_suscripcion(chat_id: int):
-    """Eliminar una suscripción"""
-    async with write_lock:
-        with conectar_db() as conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM subscriptions WHERE chat_id = %s", (chat_id,))
-                conn.commit()
-
-        logger.info(f"🗑️ Suscripción eliminada: chat_id={chat_id}")
-
-def guardar_tasas(tasas: dict):
+def set_tasas(tasas: dict):
     """Guardar tasas en la base de datos"""
     with conectar_db() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO rate_history (rate_1d, rate_2d, rate_3d, rate_7d, timestamp)
-                VALUES (%s, %s, %s, %s, %s)
-            """, (tasas['1d'], tasas['2d'], tasas['3d'], tasas['7d'], tasas['timestamp']))
+                INSERT INTO rate_history (
+                    rate_1d, volumen_1d, 
+                    rate_2d, volumen_2d,
+                    rate_3d, volumen_3d,
+                    rate_7d, volumen_7d,
+                    timestamp)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    tasas['1d'], tasas['volumen_1d'],
+                    tasas['2d'], tasas['volumen_2d'],
+                    tasas['3d'], tasas['volumen_3d'],
+                    tasas['7d'], tasas['volumen_7d'],
+                    tasas['timestamp']
+                    )
+                )
             conn.commit()
         
-        logger.debug(f"💾 Tasas guardadas en DB: {tasas}")
+        logger.info("Últimas tasas registradas")
 
-async def guardar_sugerencia(chat_id:int, username: str, mensaje: str):
+async def set_sugerencia(chat_id:int, username: str, mensaje: str):
     """Guardar una sugerencia en la base de datos"""
     async with write_lock:
         with conectar_db() as conn:
@@ -218,6 +182,32 @@ async def guardar_sugerencia(chat_id:int, username: str, mensaje: str):
             conn.commit()
         
         logger.info(f"💬 Sugerencia guardada de chat_id={chat_id}")
+
+#----------------------------------------
+# Métodos PUBLICOS
+#----------------------------------------
+
+def verificar_conexion():
+    """Verificar que la conexión es válida antes de continuar"""
+    try:
+        with conectar_db():
+            logger.info(f"Conexión a PostgreSQL verificada: {db_env['dbname']}")
+    except psycopg2.OperationalError as e:
+        logger.error(f"No se pudo conectar a PostgreSQL: {e}")
+        raise ConnectionError(f"No se pudo conectar a la base de datos: {e}")
+    except Exception as e:
+        logger.error(f"No se pudo conectar a PostgreSQL: {e}")
+        raise 
+
+async def borrar_suscripcion(chat_id: int):
+    """Eliminar una suscripción"""
+    async with write_lock:
+        with conectar_db() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM subscriptions WHERE chat_id = %s", (chat_id,))
+                conn.commit()
+
+        logger.info(f"🗑️ Suscripción eliminada: chat_id={chat_id}")
 
 def marcar_sugerencia_como_leida(sugerencia_id: int):
     """Marcar una sugerencia como leída"""

@@ -154,12 +154,6 @@ En `main.py`, dentro de `__init__`:
 self.check_interval = 60  # Verificar cada 60 segundos
 ```
 
-Opciones recomendadas:
-- `30` = 30 segundos (más rápido, usa más recursos)
-- `60` = 1 minuto (balanceado, recomendado)
-- `120` = 2 minutos (más lento, menos recursos)
-
-⚠️ **Importante**: Intervalos muy cortos (< 30s) pueden sobrecargar la API de PPI
 
 ### Tolerancia para detección de cambios
 

@@ -1,3 +1,4 @@
+from os import getenv
 from dotenv import load_dotenv
 from zoneinfo import ZoneInfo
 from datetime import time
@@ -13,6 +14,15 @@ APERTURA_MERVAL = time(10, 30)
 CIERRE_MERVAL = time(17, 0)
 
 # Importar datos para la conexión al server
+def server_config(test:bool = False) -> dict:
+    config = {
+        'host': getenv('DB_HOST'),
+        'port': int(getenv('DB_PORT', '5432')),
+        'user': getenv('DB_USER'),
+        'password': getenv('DB_PASS'),
+        'dbname': getenv('DB_NAME_TEST' if test else 'DB_NAME')
+    }
+    return config
 
 # Config logger
 def configurar_logging():

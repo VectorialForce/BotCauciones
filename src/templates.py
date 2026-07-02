@@ -99,12 +99,12 @@ def mensaje_tasas(tasas: dict, mercado_cerrado: bool, cambios: dict = None) -> s
             
             mensaje += f" {flecha} {signo}{cambio['absolute']:.2f}%"
         
-        mensaje += f'\n💰 Volumen: {volumen}\n'
+        mensaje += f'\n💰 Volumen: {volumen:,}'.replace(",", ".") + '\n'
         mensaje += "\n"
 
     mensaje += f"🗓️  Actualizado: {tasas['timestamp']}"
 
-    if not mercado_cerrado:
+    if mercado_cerrado:
         mensaje += "\n\n📅 *Horario del mercado:* Lun-Vie 10:30 - 17:00"
 
     return mensaje

@@ -151,7 +151,7 @@ class DatabaseHelper:
             logger.error(f"Error verificando tablas: {e}")
             return False, required_tables
 
-    # DEPRECADO
+    # DEPRECADO - Posiblemente sea refactorizado a futuro
     def health_check(self) -> dict:
         """
         Realizar un health check completo de la base de datos.
@@ -343,6 +343,7 @@ class PostgreSQLPersistence:
                 logger.info(f"✅ Cargadas {len(subscriptions)} suscripciones desde PostgreSQL")
                 return subscriptions
 
+    # REFACTORIZADO
     async def save_subscription(self, subscription: UserSubscription):
         """Guardar o actualizar una suscripción (async)"""
         async with self.write_lock:
@@ -375,6 +376,7 @@ class PostgreSQLPersistence:
 
             logger.info(f"🗑️ Suscripción eliminada: chat_id={chat_id}")
 
+    # REFACTORIZADO
     def save_rate_history(self, rates: dict):
         """Guardar tasas en la base de datos"""
         with self._get_connection() as conn:
@@ -386,6 +388,7 @@ class PostgreSQLPersistence:
                 conn.commit()
         logger.debug(f"💾 Tasas guardadas en DB: {rates}")
 
+    # REFACTORIZADO
     def get_latest_rates(self) -> dict | None:
         """Obtener las últimas tasas guardadas en la base de datos"""
         with self._get_connection() as conn:
@@ -594,6 +597,7 @@ class CaucionBot:
 
         return changes
 
+    # REFACTORIZADO 
     def format_rates_message(self, rates: dict, changes: dict = None, market_closed: bool = False) -> str:
         """Formatear mensaje con las tasas"""
         if not rates:
@@ -644,6 +648,7 @@ class CaucionBot:
 
         return False
 
+    # REFACTORIZADO
     def _log_command(self, command: str, chat_id: int, extra: str = ""):
         """Helper para loguear comandos"""
         self.stats['commands_processed'] += 1
@@ -705,6 +710,7 @@ class CaucionBot:
             )
             await update.message.reply_text(welcome_back, parse_mode='Markdown')
 
+    # REFACTORIZADO  
     async def tasas_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Comando /tasas - Mostrar tasas desde la base de datos"""
         self._log_command("tasas", update.effective_chat.id)
@@ -1101,12 +1107,12 @@ class CaucionBot:
 
             await query.edit_message_text(
                 "✅ *¡Listo!*\n\n"
-                "Recibirás una alerta cada vez que las tasas cambien.\n\n"
+                "Vas a recibir una alerta cada vez que las tasas cambien.\n\n"
                 "🎯 *Próximos pasos:*\n"
                 "• Usa /tasas para ver las tasas actuales\n"
                 "• Usa /estado para verificar tu configuración\n"
-                "• Usa /pausar si quieres desactivar las alertas\n\n"
-                "📊 El bot está monitoreando las tasas cada minuto. Te avisaré cuando cambien.",
+                "• Usa /pausar si queres desactivar las alertas\n\n"
+                "📊 El bot está monitoreando las tasas cada minuto. Voy a avisarte cuando cambien.",
                 parse_mode='Markdown'
             )
             logger.info(f"[CONFIG] user={chat_id} | tipo=cualquier_cambio")
