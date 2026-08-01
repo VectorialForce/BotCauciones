@@ -486,7 +486,7 @@ async def _verificar_tasas_y_notificar(context: ContextTypes.DEFAULT_TYPE):
 
     if twitter_habilitado and twitter.debe_tuitear(cambios):
         try:
-            texto_tweet = twitter.formatear_tweet(nuevas_tasas, cambios)
+            texto_tweet = templates.mensaje_tweet(nuevas_tasas, cambios)
             twitter.tuitear(texto_tweet)
         except Exception as e:
             logger.error(f"[TWITTER] Error en publicación: {e}")

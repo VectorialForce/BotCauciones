@@ -133,6 +133,27 @@ def bot_configurado(tipo: str, valor: float = 0.0) -> str:
 def mensaje_notificacion_cambio(tasas: dict, cambios: dict) -> str:
     return "🔔 *¡Cambio en las tasas!*\n\n" + mensaje_tasas(tasas, mercado_cerrado=False, cambios=cambios)
 
+def mensaje_tweet(tasas: dict, cambios: dict) -> str:
+    """Formatear mensaje para Twitter (plain-text, sin markdown)"""
+    mensaje = "🔔 ¡Cambio en las tasas!\n\n"
+    mensaje += "📊 TASAS DE CAUCIONES\n\n"
+
+    for periodo, etiqueta in [('1d', '🕐'), ('2d', '🕑'), ('3d', '🕒'), ('7d', '🕒')]:
+        tasa = tasas[periodo]
+        mensaje += f"{etiqueta} {periodo.upper()}: {tasa:.2f}% TNA"
+
+        if cambios and periodo in cambios and cambios[periodo]['changed']:
+            cambio = cambios[periodo]
+            flecha = "📈" if cambio['absolute'] > 0 else "📉"
+            signo = "+" if cambio['absolute'] > 0 else ""
+            mensaje += f" {flecha} {signo}{cambio['absolute']:.2f}%"
+
+        mensaje += "\n"
+
+    mensaje += f"\n🕒 Actualizado: {tasas['timestamp']}"
+
+    return mensaje
+
 def mensaje_configurar() -> str:
     return (
         "⚙️ *Configurar Notificaciones*\n\n"
