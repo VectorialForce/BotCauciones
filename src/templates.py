@@ -134,25 +134,23 @@ def mensaje_notificacion_cambio(tasas: dict, cambios: dict) -> str:
     return "🔔 *¡Cambio en las tasas!*\n\n" + mensaje_tasas(tasas, mercado_cerrado=False, cambios=cambios)
 
 def mensaje_tweet(tasas: dict, cambios: dict) -> str:
-    """Formatear mensaje para Twitter (plain-text, sin markdown)"""
-    mensaje = "🔔 ¡Cambio en las tasas!\n\n"
-    mensaje += "📊 TASAS DE CAUCIONES\n\n"
+    """Formatear mensaje para Twitter (plain-text, sin markdown, tope de 150 caracteres)"""
+    partes = []
 
-    for periodo, etiqueta in [('1d', '🕐'), ('2d', '🕑'), ('3d', '🕒'), ('7d', '🕒')]:
-        tasa = tasas[periodo]
-        mensaje += f"{etiqueta} {periodo.upper()}: {tasa:.2f}% TNA"
+    for periodo in ['1d', '2d', '3d', '7d']:
+        texto = f"{periodo.upper()}: {tasas[periodo]:.2f}%"
 
         if cambios and periodo in cambios and cambios[periodo]['changed']:
             cambio = cambios[periodo]
             flecha = "📈" if cambio['absolute'] > 0 else "📉"
             signo = "+" if cambio['absolute'] > 0 else ""
-            mensaje += f" {flecha} {signo}{cambio['absolute']:.2f}%"
+            texto += f" {flecha}{signo}{cambio['absolute']:.2f}%"
 
-        mensaje += "\n"
+        partes.append(texto)
 
-    mensaje += f"\n🕒 Actualizado: {tasas['timestamp']}"
+    hora = tasas['timestamp'].split(' ')[1][:5]
 
-    return mensaje
+    return "🔔 Cauciones\n\n" + "\n".join(partes) + f"\n\n🕒 {hora}hs"
 
 def mensaje_configurar() -> str:
     return (

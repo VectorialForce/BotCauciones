@@ -14,8 +14,9 @@ except ImportError:
 
 load_dotenv()
 
-public_key=getenv('PPI_PUBLIC_KEY')
-private_key=getenv('PPI_SECRET_KEY')
+# PPI siempre apunta a la API productiva, independientemente de MODO_TEST
+public_key = getenv('PPI_PUBLIC_KEY')
+private_key = getenv('PPI_SECRET_KEY')
 
 logger = configurar_logging()
 

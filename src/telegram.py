@@ -10,22 +10,20 @@ try:
     from .bot import mercado_abierto, calcular_cambios_en_tasas, get_tasas_caucion
     from . import database
     from . import twitter
-    from .config import configurar_logging, HUSO_HORARIO_ARG, CIERRE_MERVAL
+    from .config import configurar_logging, HUSO_HORARIO_ARG, CIERRE_MERVAL, MODO_TEST
     from . import templates
 except ImportError:
     from bot import mercado_abierto, calcular_cambios_en_tasas, get_tasas_caucion
     import database
     import twitter
-    from config import configurar_logging, HUSO_HORARIO_ARG, CIERRE_MERVAL
+    from config import configurar_logging, HUSO_HORARIO_ARG, CIERRE_MERVAL, MODO_TEST
     import templates
 
 #----------------------------------------
 # Config basica
 #----------------------------------------
 
-test = True
-
-if test:
+if MODO_TEST:
     telegram_token = getenv('TELEGRAM_BOT_TOKEN_TEST')
 else:
     telegram_token = getenv('TELEGRAM_BOT_TOKEN')

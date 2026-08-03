@@ -5,21 +5,18 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 try:
-    from .config import configurar_logging
+    from .config import configurar_logging, MODO_TEST
     from .config import server_config
 except ImportError:
-    from config import configurar_logging
+    from config import configurar_logging, MODO_TEST
     from config import server_config
 
 #----------------------------------------
 # Config basica
 #----------------------------------------
 
-# IMPORTANTE - Bandera para apuntar a test o prod
-test = True
-
 logger = configurar_logging()
-db_env = server_config(test)
+db_env = server_config(MODO_TEST)
 
 # Esto esta de modo temporal, es una RESPONSABILIDAD del ORQUESTADOR NO del MODULO
 required_vars = ['DB_HOST', 'DB_USER', 'DB_PASS', 'DB_NAME']

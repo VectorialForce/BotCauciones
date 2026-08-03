@@ -1,4 +1,3 @@
-# Desde main unicamente lo que se debe hacer es apuntar a prod o a test
 from src import bot
 from src import database
 from src import telegram

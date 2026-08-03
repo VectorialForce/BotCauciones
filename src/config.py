@@ -6,6 +6,9 @@ import logging
 
 load_dotenv()
 
+# Bandera global de test/producción, seteada desde el .env
+MODO_TEST = getenv('TEST', 'False').strip().lower() == 'true'
+
 # Setear huso horario
 HUSO_HORARIO_ARG = ZoneInfo("America/Buenos_Aires")
 
