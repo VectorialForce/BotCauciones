@@ -1,0 +1,11 @@
+ALTER TABLE rate_history
+    ADD COLUMN volumen_1d BIGINT,
+    ADD COLUMN volumen_2d BIGINT,
+    ADD COLUMN volumen_3d BIGINT,
+    ADD COLUMN volumen_7d BIGINT;
+
+UPDATE rate_history SET 
+    volumen_1d = NULL, 
+    volumen_2d = NULL, 
+    volumen_3d = NULL, 
+    volumen_7d = NULL;
