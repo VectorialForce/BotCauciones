@@ -12,3 +12,4 @@ venv/
 chrome_profile/
 .pytest_cache/
 .claude
+.ruff_cache/
